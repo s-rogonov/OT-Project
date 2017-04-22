@@ -1,52 +1,24 @@
-from scapy.all import *
-from scapy.layers import *
-
-from subprocess import check_output
-
-import socket
-import docopt
-import os
-import sys
 from struct import *
-from scapy import all
 import scapy.layers.l2
-
 import scapy.layers.all
+from scapy.all import *
 import socket
-import struct
-import sys
-import netifaces
+from subprocess import *
 import binascii
+import time
 
-ipAddress = "188.130.155.76"
+ipAddress = "192.168.0.3"
+srcIP = "192.168.0.1"
 sender = True
-interface = "ens33"
-
-def packet_loop(s):
-    # receive a packet
-    while True:
-        packet = s.recvfrom(65565)
-        packet = packet[0]
-        eth_length = 14
-        eth_header = packet[:eth_length]
-        eth = unpack('!6s6sH', eth_header)
-        eth_protocol = socket.ntohs(eth[2])
-        addrinfo = [
-            'Destination MAC: {}'.format(eth_addr(packet[0:6])),
-            'Source MAC: {}'.format(eth_addr(packet[6:12])),
-            'Protocol: {}'.format(eth_protocol)
-        ]
-        if eth_protocol == 1544:
-            print(' '.join(addrinfo))
-        print('')
-
+ifname = "ens33"
+delay = 5
 
 def make_arp_packet(destip):
     return 0  # packet
 
-
-def send_arp_packet(arppacket):
-    return 0  # packet
+def send_arp_packet(srcIP, targetIP):
+    pkt = send(scapy.layers.l2.ARP(
+        op=scapy.layers.l2.ARP.who_has, psrc=srcIP, pdst=targetIP))
 
 
 def ecode_msg(msg, iptable):  # msg array of bytes []
@@ -65,128 +37,7 @@ def sender_loop(socket):  # msg array of bytes []
     return 0  # array of bytes []
 
 
-#        # Parse IP packets, IP Protocol number = 8
-#        if eth_protocol == 8:
-#            # Parse IP header
-#            # take first 20 characters for the ip header
-#            ip_header = packet[eth_length:20 + eth_length]
-#
-#            # now unpack them :)
-#            iph = unpack('!BBHHHBBH4s4s', ip_header)
-#
-#            version_ihl = iph[0]
-#            version = version_ihl >> 4
-#            ihl = version_ihl & 0xF
-#
-#            iph_length = ihl * 4
-#
-#            ttl = iph[5]
-#            protocol = iph[6]
-#            s_addr = socket.inet_ntoa(iph[8])
-#            d_addr = socket.inet_ntoa(iph[9])
-#
-#            headerinfo = [
-#                'Version: {}'.format(version),
-#                'IP Header Length: {}'.format(ihl),
-#                'TTL: {}'.format(ttl),
-#                'Protocol: {}'.format(protocol),
-#                'Source Addr: {}'.format(s_addr),
-#                'Desr.Addr: {}'.format(d_addr)]
-#            print(' '.join(headerinfo))
-#
-#            # TCP protocol
-#            if protocol == 6:
-#                t = iph_length + eth_length
-#                tcp_header = packet[t:t + 20]
-#
-#                # now unpack them :)
-#                tcph = unpack('!HHLLBBHHH', tcp_header)
-#
-#                source_port = tcph[0]
-#                dest_port = tcph[1]
-#                sequence = tcph[2]
-#                acknowledgement = tcph[3]
-#                doff_reserved = tcph[4]
-#                tcph_length = doff_reserved >> 4
-#
-#                tcpinfo = [
-#                    'Source Port: {}'.format(source_port),
-#                    'Dest. Port: {}'.format(dest_port),
-#                    'Sequence Num: {}'.format(sequence),
-#                    'Acknowledgement: {}'.format(acknowledgement),
-#                    'TCP Header Len.: {}'.format(tcph_length),
-#                ]
-#                print(' '.join(tcpinfo))
-#
-#                h_size = eth_length + iph_length + tcph_length * 4
-#                data_size = len(packet) - h_size
-#
-#                # get data from the packet
-#                data = packet[h_size:]
-#
-#                print('Data: {}'.format(data_decode(data)))
-#
-#            # ICMP Packets
-#            elif protocol == 1:
-#                u = iph_length + eth_length
-#                icmph_length = 4
-#                icmp_header = packet[u:u + 4]
-#
-#                # now unpack them :)
-#                icmph = unpack('!BBH', icmp_header)
-#
-#                icmp_type = icmph[0]
-#                code = icmph[1]
-#                checksum = icmph[2]
-#
-#                icmpinfo = [
-#                    'Type: {}'.format(icmp_type),
-#                    'Code: {}'.format(code),
-#                    'Checksum: {}'.format(checksum)
-#                ]
-#                print(' '.join(icmpinfo))
-#
-#                h_size = eth_length + iph_length + icmph_length
-#                data_size = len(packet) - h_size
-#
-#                # get data from the packet
-#                data = packet[h_size:]
-#
-#                print('Data : {}'.format(data_decode(data)))
-#
-#            # UDP packets
-#            elif protocol == 17:
-#                u = iph_length + eth_length
-#                udph_length = 8
-#                udp_header = packet[u:u + 8]
-#
-#                # now unpack them :)
-#                udph = unpack('!HHHH', udp_header)
-#
-#                source_port = udph[0]
-#                dest_port = udph[1]
-#                length = udph[2]
-#                checksum = udph[3]
-#
-#                udpinfo = [
-#                    'Source Port: {}'.format(source_port),
-#                    'Dest. Port: {}'.format(dest_port),
-#                    'Length: {}'.format(length),
-#                    'Checksum: {}'.format(checksum)
-#                ]
-#                print(udpinfo)
-#
-#                h_size = eth_length + iph_length + udph_length
-#                data_size = len(packet) - h_size
-#
-#                # get data from the packet
-#                data = packet[h_size:]
-#
-#                print('Data: {}'.format(data_decode(data)))
-#
-#            # some other IP packet like IGMP
-#            else:
-#                print('Protocol other than TCP/UDP/ICMP')
+
 #
 
 def data_decode(b):
@@ -209,6 +60,29 @@ def eth_addr2(a):
     return '%.2x:%.2x:%.2x:%.2x:%.2x:%.2x' % pieces
 
 
+def start_listen(raw_socket, ip_list):
+    while True:
+        packet = raw_socket.recvfrom(65565)
+        print(packet)
+        packet = packet[0]
+        eth_length = 14
+        eth_header = packet[:eth_length]
+        eth = unpack('!6s6sH', eth_header)
+        eth_protocol = socket.ntohs(eth[2])
+        if eth_protocol == 1544:
+            arp_header = packet [14:42]
+            arp_detailed = struct.unpack("2s2s1s1s2s6s4s6s4s", arp_header)
+            source_ip = socket.inet_ntoa(arp_detailed[6])
+            print("ARP from:"+source_ip)
+            dest_ip = socket.inet_ntoa(arp_detailed[8])
+            print ("ARP to:"+dest_ip)
+            if (source_ip == ipAddress):
+                ip_list.append(dest_ip)
+            print ("Source MAC:", binascii.hexlify(arp_detailed[5]))
+            print ("Source IP:", socket.inet_ntoa(arp_detailed[6]))
+            print ("Dest MAC:", binascii.hexlify(arp_detailed[7]))
+            print ("Dest IP:", socket.inet_ntoa(arp_detailed[8]))
+
 ipnCommand = check_output(["ip", "n"])
 result = "".join(map(chr, ipnCommand))
 result = result.split("\n")
@@ -218,11 +92,12 @@ for i in range(len(result)):
 result.sort()
 print(result)
 if sender:
-    arp = scapy.layers.l2.ARP()#op=ARP.who_has, psrc="192.168.5.51", pdst="192.168.5.46")
-    #pkt = send(ARP(op=ARP.who_has, psrc="192.168.5.51", pdst="192.168.5.46"))
-    #x = sniff(filter="arp", count=10)
-    #print (x.summary())
+    print("Waiting "+ str(delay) + " seconds")
+    time.sleep(5)
+    for i in result:
+        if i != ipAddress:
+            send_arp_packet(srcIP,i)
+        send_arp_packet(srcIP,ipAddress)
+    rawSocket = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
+    start_listen(rawSocket,result)
     print ("done")
-
-# else:
-#   i = 1
