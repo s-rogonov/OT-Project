@@ -1,14 +1,26 @@
+from scapy.all import *
+from scapy.layers import *
+
 from subprocess import check_output
+
 import socket
 import docopt
 import os
 import sys
 from struct import *
+from scapy import all
+import scapy.layers.l2
 
-#TODO start stop codes
+import scapy.layers.all
+import socket
+import struct
+import sys
+import netifaces
+import binascii
 
 ipAddress = "188.130.155.76"
-listener = True
+sender = True
+interface = "ens33"
 
 def packet_loop(s):
     # receive a packet
@@ -25,27 +37,33 @@ def packet_loop(s):
             'Protocol: {}'.format(eth_protocol)
         ]
         if eth_protocol == 1544:
-        	print(' '.join(addrinfo))
+            print(' '.join(addrinfo))
         print('')
-    return 0
+
 
 def make_arp_packet(destip):
-	return 0; #packet
+    return 0  # packet
+
 
 def send_arp_packet(arppacket):
-	return 0; #packet
+    return 0  # packet
 
-def ecode_msg(msg, iptable): # msg array of bytes []
-	return 0; #array of packets
 
-def marshaling_msg(msg): # msg array of bytes []
-	return 0; #array of bytes []
+def ecode_msg(msg, iptable):  # msg array of bytes []
+    return 0  # array of packets
 
-def listener_loop(socket): # msg array of bytes []
-	return 0; #array of bytes []
 
-def sender_loop(socket): # msg array of bytes []
-	return 0; #array of bytes []
+def marshaling_msg(msg):  # msg array of bytes []
+    return 0  # array of bytes []
+
+
+def listener_loop(socket):  # msg array of bytes []
+    return 0  # array of bytes []
+
+
+def sender_loop(socket):  # msg array of bytes []
+    return 0  # array of bytes []
+
 
 #        # Parse IP packets, IP Protocol number = 8
 #        if eth_protocol == 8:
@@ -171,8 +189,6 @@ def sender_loop(socket): # msg array of bytes []
 #                print('Protocol other than TCP/UDP/ICMP')
 #
 
-
-
 def data_decode(b):
     if sys.version_info.major == 2:
         return b
@@ -192,6 +208,7 @@ def eth_addr2(a):
     pieces = tuple(ord(a[i]) for i in range(6))
     return '%.2x:%.2x:%.2x:%.2x:%.2x:%.2x' % pieces
 
+
 ipnCommand = check_output(["ip", "n"])
 result = "".join(map(chr, ipnCommand))
 result = result.split("\n")
@@ -200,9 +217,12 @@ for i in range(len(result)):
     result[i] = result[i].split(" ")[0]
 result.sort()
 print(result)
-if (listener):
-    s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(0x0003))
-    ret = packet_loop(s)
-else:
-    i = 1
+if sender:
+    arp = scapy.layers.l2.ARP()#op=ARP.who_has, psrc="192.168.5.51", pdst="192.168.5.46")
+    #pkt = send(ARP(op=ARP.who_has, psrc="192.168.5.51", pdst="192.168.5.46"))
+    #x = sniff(filter="arp", count=10)
+    #print (x.summary())
+    print ("done")
 
+# else:
+#   i = 1
