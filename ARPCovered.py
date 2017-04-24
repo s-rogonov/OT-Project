@@ -108,12 +108,12 @@ if __name__ == "__main__":
     result.sort()
     print(result)
     result = set(result)
-
     if sender:
         print ("Sender")
         print("Waiting "+ str(delay) + " seconds")
         time.sleep(delay)
         send_arp_table(result, selfIP, ipAddress)
+        #if you want to extract this step from branch - Ne Nado
         rawSocket = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
         start_listen (rawSocket,result,selfIP,ipAddress, sender)
         print (sorted(result))
