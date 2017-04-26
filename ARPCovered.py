@@ -11,8 +11,11 @@ import binascii
 import time
 import sys
 import getopt
+import bitstring
+from math import floor,log
 
 delay = 5
+banlist = "188.130.155.33"
 
 #def make_arp_packet(destip):
 #    return 0  # packet
@@ -32,9 +35,94 @@ delay = 5
 #def sender_loop(socket):  # msg array of bytes []
 #    return 0  # array of bytes []
 
+def start_command(rawSocket,ip_table,selfIP,ipAddress, sender):
+    ip_table.discard(selfIP)
+    ip_table.discard(ipAddress)
+    ip_table.discard(banlist)
+    ip_table = sorted(list(ip_table))
+    print (ip_table)
+    max_number = len(ip_table)
+    number_of_bits = int(floor(log(max_number,2)))
+    print(max_number,number_of_bits)
+    while True:
+        message = input("Print message:")
+        message_in_bits = (tobits(message))
+        print (message_in_bits)
+        for i in range (0,len(message_in_bits),number_of_bits):
+            transmit = message_in_bits [i:i+number_of_bits]
+            print (transmit)
+            out = 0
+            for bit in transmit:
+                out = (out << 1) | bit
+            print (out)
+            print (ip_table[out])
+            send_arp_packet(selfIP,ip_table[out])
+
+def start_listen_master(rawSocket, ip_table,selfIP,ipAddress, sender):
+    ip_table.discard(selfIP)
+    ip_table.discard(ipAddress)
+    ip_table.discard(banlist)
+    ip_table = sorted(list(ip_table))
+    print(ip_table)
+    message = []
+    max_number = len(ip_table)
+    number_of_bits = int(floor(log(max_number, 2)))
+    print(max_number, number_of_bits)
+    while True:
+        rawSocket.close()
+        rawSocket = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
+        packet = rawSocket.recvfrom(65565)
+        packet = packet[0]
+        eth_length = 14
+        eth_header = packet[:eth_length]
+        eth = unpack('!6s6sH', eth_header)
+        eth_protocol = socket.ntohs(eth[2])
+        if eth_protocol == 1544:
+            arp_header = packet[14:42]
+            arp_detailed = struct.unpack("2s2s1s1s2s6s4s6s4s", arp_header)
+            source_ip = socket.inet_ntoa(arp_detailed[6])
+            if source_ip == ipAddress:
+                dest_ip = socket.inet_ntoa(arp_detailed[8])
+                if(dest_ip != banlist):
+                    number = ip_table.index(dest_ip)
+                    print(number)
+                    if len(message) < 8 - number_of_bits:
+                        for i in range(number_of_bits):
+                            out = (number >> number_of_bits - i and 1)
+                            message.append(out)
+                        print(message)
+                    else:
+                        for i in range(8 - len(message)):
+                            out = (number >> (8 - len(message)) - i and 1)
+                            message.append(out)
+                        print(message)
+                    if len(message)>=8:
+                        char = frombits(message)
+                        print (char)
+
+
+
+
+def tobits(s):
+    result = []
+    for c in s:
+        bits = bin(ord(c))[2:]
+        bits = '00000000'[len(bits):] + bits
+        result.extend([int(b) for b in bits])
+    return result
+
+def frombits(bits):
+    chars = []
+    print(len(bits))
+    for b in range(int(len(bits) / 8)):
+        byte = bits[b*8:(b+1)*8]
+        chars.append(chr(int(''.join([str(bit) for bit in byte]), 2)))
+    return ''.join(chars)
+
+
 def send_arp_packet(srcIP, targetIP):
     pkt = send(scapy.layers.l2.ARP(
-        op=scapy.layers.l2.ARP.who_has, psrc=srcIP, pdst=targetIP))
+        op=scapy.layers.l2.ARP.who_has, psrc=srcIP, pdst=targetIP),verbose=0)
 
 def send_arp_table(ipTableList,selfIP,ipAddress):
     for i in ipTableList:
@@ -44,13 +132,14 @@ def send_arp_table(ipTableList,selfIP,ipAddress):
     print(ipAddress)
     send_arp_packet(selfIP, ipAddress)
 
-def start_listen(raw_socket, ip_list,selfIP,comIP,sender):
+def start_listen(pkt):
     ''' Inputs: socket to receive from
     List of IP which will synchronized
     IP address of this computer
     IP address of companion
      From which we start this function from listener or initiator '''
-    while True:
+    #while True:
+    
         packet = raw_socket.recvfrom(65565)
         packet = packet[0]
         eth_length = 14
@@ -87,7 +176,7 @@ if __name__ == "__main__":
     opts, args = getopt.getopt(sys.argv[1:], "hi:o:r:")
     for opt, arg in opts:
         if opt == '-h':
-            print('test.py -i <Your IP> -o <IP of destination> -r <Role> \n Role: "1" for listener "0" for initiator')
+            print(' -i <Your IP> -o <IP of destination> -r <Role> \n Role: "1" for listener "0" for initiator')
             sys.exit()
         elif opt in ("-i"):
             selfIP = arg
@@ -117,6 +206,7 @@ if __name__ == "__main__":
         rawSocket = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
         start_listen (rawSocket,result,selfIP,ipAddress, sender)
         print (sorted(result))
+        start_command(rawSocket,set(sorted(result)),selfIP,ipAddress, sender)
     else:
         rawSocket = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
         start_listen(rawSocket,result,selfIP,ipAddress, sender)
@@ -124,5 +214,7 @@ if __name__ == "__main__":
         print (result)
         time.sleep(delay)
         send_arp_table(result, selfIP, ipAddress)
-        print("Full table")
-        print (sorted(result))
+        rawSocket.close()
+        rawSocket = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
+        sniff(prn=start_listen_master(), filter="arp", store=0)
+        #start_listen_master(rawSocket,set(sorted(result)),selfIP,ipAddress, sender)
